@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+  /* Set the size of the div element that contains the map */
+  html, body, #map {
+  	height: 100%;
+  	width: 100%;
+  	margin: 0px;
+  	padding: 0px;
+  }
+  </style>
+  <title>Handover Map</title>
+  <!--The div element for the map -->
+  <!-- Replace the value of the key parameter with your own API key. -->
+  <script src="https://maps.googleapis.com/maps/api/js?libraries=geometry,visualization"></script>
+  <script src="site_all.js"></script>
+  <script src="site_selection.js"></script>
+  <script src="site_selection_2.js"></script>
+  <script src="site_selection_3.js"></script>
+  <script src="heatmapData.js"></script>
+  <script src="handover_relation.js"></script>
+
+  <script>
+	function initMap() {
+    var centerPt = new google.maps.LatLng(22.302711, 114.177216); // Coordinates of HKSAR
+    var map = new google.maps.Map(document.getElementById('map'), {
+      zoom: 12,
+      center: centerPt,
+      mapTypeId: 'terrain'
+    });
+
+    var dict = {};
+    var dict_417 = {};
+
+    // import site_all.js for ALL site data
+    for(var x in site) {
+      var location = site[x];
+      var latLng = new google.maps.LatLng(location.Lat, location.lon);
+      var name = location.Sitecode;
+      dict[name] = latLng;
+    }
+
+    // import site_selection_2.js for 417 site data
+    for(var y in selection_2) {
+      var location = selection_2[y];
+      var name = location.Sitecode;
+      if(dict[name] != undefined) {
+        dict_417[name] = true;
+        addMarker(map, name, dict[name]);
+      }
+    }
+
+    // import site_selection_3.js for 374 site data
+    for(var y in selection_3) {
+      var location = selection_3[y];
+      var name = location.Sitecode;
+      if(dict[name] != undefined) {
+        dict_417[name] = true;
+        addMarker(map, name, dict[name]);
+      }
+    }
+
+    // import site_selection.js for 417 site data
+    for(var y in selection) {
+      var location = selection[y];
+      var name = location.Sitecode;
+      if(dict[name] != undefined) {
+        dict_417[name] = true;
+        addMarker(map, name, dict[name]);
+      }
+    }
+
+    // import handover_relation.js for handover data
+    for(var z in handover) {
+      var relation = handover[z];
+      if(dict_417[relation.Source_Site] != undefined) {
+        var source = dict[relation.Source_Site];
+        var target = dict[relation.Target_Site];
+        if(source != undefined && target != undefined) {
+          var distance = google.maps.geometry.spherical.computeDistanceBetween(source, target);
+          if(distance <= 500) {
+            var coverage = ((distance**2) / 3)**0.5;
+            // console.log(coverage);
+            connectSite(map, source, target, coverage);
+            dict_417[relation.Source_Site] = false;
+            // if(relation.Source_Site == "ESHFI") console.log("error");
+          }
+        }
+      }
+    }
+
+    // complete circles for sites without handover
+    for(var key in dict_417) {
+      if(dict_417[key]) {
+        // console.log(key);
+        var cityCircle = new google.maps.Circle({
+          strokeColor: "white",
+          strokeOpacity: 0.5,
+          strokeWeight: 1,
+          fillColor: "blue",
+          fillOpacity: 0.2,
+          map: map,
+          center: dict[key],
+          radius: 300
+        });
+      }
+    }
+
+    // import heatmapData.js for heatmap data
+    var measurement = [];
+
+    for(var num in heatmapData) {
+      var location = heatmapData[num];
+      // console.log(location.lat);
+      // console.log(location.lon);
+      // console.log(location.Receive_level);
+      var latLng = new google.maps.LatLng(location.lat, location.lon);
+      var weight = location.Receive_level;
+      // var weightedLoc = new google.maps.visualization.WeightedLocation(latLng, weight);
+      // measurement.push(weightedLoc);
+      measurement.push(latLng);
+    }
+
+    heatmap = new google.maps.visualization.HeatmapLayer({
+      data: measurement,
+      map: map
+    });
+  }
+
+  /***
+  * This function creats a marker for the site.
+  * @param name must be a string.
+  * @param location must be a google.maps.LatLng object.
+  ***/
+  function addMarker(map, name, latLng) {
+    var marker = new google.maps.Marker({
+      position: latLng,
+      map: map,
+      title: name,
+      opacity: 0.5
+    });
+
+    // google.maps.event.addListener(marker, 'click', function() {
+    //   if(typeof infowindow != 'undefined') infowindow.close();
+    //   infowindow = new google.maps.infowindow({
+    //     content: coverage
+    //   });
+    //   infowindow.open(map, marker);
+    // });
+  }
+
+  /***
+  * This function creats an edge and a 120" circle to indicate handover relationship.
+  * @param source & target must be a google.maps.LatLng object.
+  * @param startAngle must be an integer from 0 to 500
+  ***/
+  function connectSite(map, source, target, coverage) {
+    // create edge
+    // var path = new google.maps.Polyline({
+    //     path: [source, target],
+    //     map: map,
+    //     strokeColor: 'black',
+    //     strokeOpacity: 1,
+    //     strokeWeight: 2
+    // });
+
+    // create pie slice
+    //// find bearing
+    //// computeHeading expresses in degrees clockwise from North within the range [-180,180).
+    var heading = google.maps.geometry.spherical.computeHeading(source, target);
+    if (heading <= 0) heading = Math.round(360 + heading);
+    else heading = Math.round(heading);
+    var start = heading - 60;
+    var end = heading + 60;
+    if (heading < 60) start = start + 360;
+    if (heading > 300) end = end - 360;
+  
+    //// set arc path
+    var path = getArcPath(source, coverage, start, end);
+    path.unshift(source);
+    var poly = new google.maps.Polygon({
+      path: path,
+      map: map,
+      strokeColor: 'white',
+      strokeOpacity: 0.5,
+      strokeWeight: 1,
+      fillColor: 'blue',
+      fillOpacity: 0.2
+    });
+  }
+  
+  /***
+  * REQUIRES: google.maps.geometry library, via a 'libraries=geometry' parameter
+  *  on url to google maps script
+  * @param center must be a google.maps.LatLng object.
+  * @param radiusMeters must be a number, radius in meters.
+  * @param startAngle must be an integer from 0 to 360, angle at which to begin   arc.
+  * @param endAngle must be an integer from 0 to 360, angle at which to end arc.
+  *   For a full circle, use startAngle of 0 and endAngle of 360
+  *   which will create a closed path.
+  * @param direction -optional- defaults to clockwise,
+  *   pass string 'counterclockwise' to reverse direction.
+  * @Returns array of google.maps.LatLng objects.
+  ***/
+  function getArcPath(center, radiusMeters, startAngle, endAngle, direction) {
+    var point, previous,
+      atEnd = false,
+      points = Array(),
+      a = startAngle;
+    while (true) {
+      point = google.maps.geometry.spherical.computeOffset(center, radiusMeters, a);
+      points.push(point);
+      if (a == endAngle) {
+        break;
+      }
+      a++;
+      if (a > 360) {
+        a = 1;
+      }
+    }
+    if (direction == 'counterclockwise') {
+      points = points.reverse();
+    }
+    return points;
+  }
+  google.maps.event.addDomListener(window, 'load', initMap); // initial Maps API
+</script>
+
+</head>
+
+<body>
+  <div id="map">
+</body>
+</html>
