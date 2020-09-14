@@ -13,11 +13,7 @@
   <title>Handover Map</title>
   <!--The div element for the map -->
   <!-- Replace the value of the key parameter with your own API key. -->
-  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAJTgA1cNvt2VL6p4OuUAeSYxDSRlCWjM8&libraries=geometry"></script>
-  <script src="site_all.js"></script>
-  <script src="site_selection.js"></script>
-  <script src="site_selection_2.js"></script>
-  <script src="site_selection_3.js"></script>
+  <script src="https://maps.googleapis.com/maps/api/js?libraries=geometry"></script>
 
   <script>
   function initMap() {
@@ -3480,60 +3476,7 @@
     for(x in area)
       sum += area[x];
 
-    console.log(sum/1000000)
-
-    // var dict = {};
-    // var dict_chosen = {}; // undefined: not chosen, true: chosen and not yet drawn, false: chosen and already drawn
-
-    // // import site_all.js for ALL site data
-    // for(var x in site) {
-    //   var location = site[x];
-    //   var latLng = new google.maps.LatLng(location.Lat, location.lon);
-    //   var name = location.Sitecode;
-    //   dict[name] = latLng;
-    // }
-
-    // // import site_selection for chsoen site data
-    // for(var y in selection_2) {
-    //   var location = selection_2[y];
-    //   var name = location.Sitecode;
-    //   // console.log(name)
-    //   if(dict[name] != undefined) {
-    //     dict_chosen[name] = true;
-    //     // addMarker(map, name, dict[name]);
-    //   }
-    // }
-    // for(var y in selection_3) {
-    //   var location = selection_3[y];
-    //   var name = location.Sitecode;
-    //   // console.log(name)
-    //   if(dict[name] != undefined) {
-    //     dict_chosen[name] = true;
-    //     // addMarker(map, name, dict[name]);
-    //   }
-    // }
-    // for(var y in selection) {
-    //   var location = selection[y];
-    //   var name = location.Sitecode;
-    //   // console.log(name)
-    //   if(dict[name] != undefined) {
-    //     dict_chosen[name] = true;
-    //     // addMarker(map, name, dict[name]);
-    //   }
-    // }
-    
-    // for(var key in dict_chosen) {
-    //   var siteCircle = new google.maps.Circle({
-    //       strokeColor: "white",
-    //       strokeOpacity: 0,
-    //       strokeWeight: 1,
-    //       fillColor: "red",
-    //       fillOpacity: 1,
-    //       map: map,
-    //       center: dict[key],
-    //       radius: 500
-    //   });
-    // }
+    console.log(sum/1000000); // in km square
   }
 
   function define_urban(map, coords) {
